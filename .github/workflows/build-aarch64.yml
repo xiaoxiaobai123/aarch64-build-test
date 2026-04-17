@@ -1,0 +1,58 @@
+name: Build aarch64 binary (RK3568 / Debian bookworm)
+
+on:
+  push:
+    branches:
+      - main
+      - claude/**
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: PyInstaller build under QEMU aarch64
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU (aarch64)
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Build inside debian:bookworm arm64 container
+        run: |
+          docker run --rm --platform linux/arm64 \
+            -v "${{ github.workspace }}:/work" \
+            -w /work \
+            debian:bookworm \
+            bash -euxo pipefail -c '
+              uname -m
+              cat /etc/os-release
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update
+              apt-get install -y --no-install-recommends \
+                python3 python3-venv python3-pip \
+                binutils ca-certificates
+              python3 -m venv /opt/venv
+              . /opt/venv/bin/activate
+              pip install --no-cache-dir --upgrade pip
+              pip install --no-cache-dir pyinstaller
+              pyinstaller --onefile --name hello hello.py
+              ls -lah dist/
+              file dist/hello
+              ./dist/hello
+            '
+
+      - name: Show binary info
+        run: |
+          ls -lah dist/
+          file dist/hello || true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hello-aarch64-bookworm
+          path: dist/hello
+          if-no-files-found: error
