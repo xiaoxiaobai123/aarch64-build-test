@@ -9,47 +9,39 @@ on:
 
 jobs:
   build:
-    name: PyInstaller build under QEMU aarch64
-    runs-on: ubuntu-latest
+    name: PyInstaller build on native arm64 runner
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: debian:bookworm
 
     steps:
+      - name: Show environment
+        run: |
+          uname -m
+          cat /etc/os-release
+
+      - name: Install build dependencies
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            python3 python3-venv python3-pip \
+            libpython3.11 \
+            binutils file ca-certificates git
+
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up QEMU (aarch64)
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
-
-      - name: Build inside debian:bookworm arm64 container
+      - name: Build with PyInstaller
         run: |
-          docker run --rm --platform linux/arm64 \
-            -v "${{ github.workspace }}:/work" \
-            -w /work \
-            debian:bookworm \
-            bash -euxo pipefail -c '
-              uname -m
-              cat /etc/os-release
-              export DEBIAN_FRONTEND=noninteractive
-              apt-get update
-              apt-get install -y --no-install-recommends \
-                python3 python3-venv python3-pip \
-                libpython3.11 \
-                binutils file ca-certificates
-              python3 -m venv /opt/venv
-              . /opt/venv/bin/activate
-              pip install --no-cache-dir --upgrade pip
-              pip install --no-cache-dir pyinstaller
-              pyinstaller --onefile --name hello hello.py
-              ls -lah dist/
-              file dist/hello
-              ./dist/hello
-            '
-
-      - name: Show binary info
-        run: |
+          python3 -m venv /opt/venv
+          . /opt/venv/bin/activate
+          pip install --no-cache-dir --upgrade pip
+          pip install --no-cache-dir pyinstaller
+          pyinstaller --onefile --name hello hello.py
           ls -lah dist/
-          file dist/hello || true
+          file dist/hello
+          ./dist/hello
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
