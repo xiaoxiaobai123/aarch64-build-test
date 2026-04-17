@@ -37,8 +37,11 @@ jobs:
           python3 -m venv /opt/venv
           . /opt/venv/bin/activate
           pip install --no-cache-dir --upgrade pip
+          pip install --no-cache-dir -r requirements.txt
           pip install --no-cache-dir pyinstaller
-          pyinstaller --onefile --name hello hello.py
+          pyinstaller --onefile --name hello \
+            --collect-all pymodbus \
+            hello.py
           ls -lah dist/
           file dist/hello
           ./dist/hello
