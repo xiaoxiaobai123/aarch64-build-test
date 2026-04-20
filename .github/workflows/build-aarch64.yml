@@ -1,0 +1,72 @@
+name: Build aarch64
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04-arm
+
+    env:
+      MVS_DEB_URL: https://file.emnavi.tech/common_tools/Hikcamera/MVS-3.0.1_aarch64_20241128.deb
+      MVS_DEB_NAME: MVS-3.0.1_aarch64_20241128.deb
+      MVS_PY_PATH: /opt/MVS/Samples/aarch64/Python/MvImport
+      MVS_LIB_PATH: /opt/MVS/lib/aarch64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache MVS deb
+        id: cache-mvs
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.MVS_DEB_NAME }}
+          key: mvs-deb-${{ env.MVS_DEB_NAME }}
+
+      - name: Download MVS SDK
+        if: steps.cache-mvs.outputs.cache-hit != 'true'
+        run: wget -c "$MVS_DEB_URL" -O "$MVS_DEB_NAME"
+
+      - name: Install MVS SDK
+        run: |
+          sudo dpkg -i "$MVS_DEB_NAME" || sudo apt-get -f install -y
+          # 海康 deb 会覆盖系统 libusb，删掉这个避免污染系统依赖
+          sudo rm -f /opt/MVS/lib/aarch64/libusb-1.0.so.0
+          test -d "$MVS_PY_PATH" && echo "MvImport OK" || { echo "MvImport missing"; exit 1; }
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller numpy opencv-python-headless Pillow pyModbusTCP
+
+      - name: Build with PyInstaller
+        env:
+          PYTHONPATH: ${{ env.MVS_PY_PATH }}
+          LD_LIBRARY_PATH: ${{ env.MVS_LIB_PATH }}
+        run: |
+          pyinstaller --clean -y main.spec
+          ls -la dist/
+          file dist/main
+
+      - name: Stage release bundle
+        run: |
+          mkdir -p release
+          cp dist/main release/
+          cp -r deploy release/deploy
+          cp config.json release/ 2>/dev/null || true
+          ls -la release/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-aarch64-${{ github.sha }}
+          path: release/
+          if-no-files-found: error
+          retention-days: 30
