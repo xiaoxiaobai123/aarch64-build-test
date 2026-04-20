@@ -59,6 +59,11 @@ jobs:
 
       - name: Smoke test (run the binary for 5s)
         continue-on-error: true
+        env:
+          # 模拟 deploy/main.service 里的 Environment= 设置
+          MVCAM_SDK_PATH: /opt/MVS
+          MVCAM_COMMON_RUNENV: /opt/MVS/lib
+          LD_LIBRARY_PATH: /opt/MVS/lib/aarch64
         run: |
           echo "=== binary will fail because runner has no camera/PLC/framebuffer ==="
           echo "=== we only want to verify it starts and MVS SDK loads ==="
