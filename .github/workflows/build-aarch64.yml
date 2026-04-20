@@ -57,6 +57,18 @@ jobs:
           ls -la dist/
           file dist/main
 
+      - name: Smoke test (run the binary for 5s)
+        continue-on-error: true
+        run: |
+          echo "=== binary will fail because runner has no camera/PLC/framebuffer ==="
+          echo "=== we only want to verify it starts and MVS SDK loads ==="
+          set +e
+          timeout 5s ./dist/main
+          rc=$?
+          echo "=== exit code: $rc (124 = killed by timeout = GOOD) ==="
+          echo "=== my_app.log contents: ==="
+          cat my_app.log 2>/dev/null || echo "(no log file written in CWD)"
+
       - name: Stage release bundle
         run: |
           mkdir -p release
