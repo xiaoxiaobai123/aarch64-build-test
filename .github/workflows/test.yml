@@ -12,6 +12,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-22.04-arm
+    permissions:
+      checks: write
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -29,4 +32,41 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Run pytest
-        run: pytest tests/ -v --tb=short
+        run: pytest tests/
+
+      - name: Write coverage summary to job step summary
+        if: always()
+        run: |
+          echo "## Coverage" >> "$GITHUB_STEP_SUMMARY"
+          if command -v coverage >/dev/null; then
+            coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY" || true
+          fi
+
+      - name: Upload HTML coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html
+          path: htmlcov/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload JUnit + coverage XML
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            junit.xml
+            coverage.xml
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Publish JUnit test report
+        if: always()
+        uses: mikepenz/action-junit-report@v4
+        with:
+          report_paths: junit.xml
+          check_name: pytest results
+          include_passed: true
+          detailed_summary: true

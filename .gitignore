@@ -6,3 +6,7 @@ my_app.log*
 build/
 dist/
 *.egg-info/
+htmlcov/
+.coverage
+coverage.xml
+junit.xml

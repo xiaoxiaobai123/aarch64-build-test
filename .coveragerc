@@ -1,0 +1,23 @@
+[run]
+source = .
+branch = True
+omit =
+    tests/*
+    conftest.py
+    test_display.py
+    main.spec
+    camera_base.py
+    camera_manager.py
+    camera_environment.py
+    plc_base.py
+    log_config.py
+    main.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:
+    raise NotImplementedError
+    if TYPE_CHECKING:
+skip_covered = False
+show_missing = True
